@@ -1,5 +1,5 @@
 //! Chip and board specific configuration settings go here.
-use stm32f407;
+use stm32f7x7;
 use ::bootload;
 
 /// TCP port to listen on
@@ -32,7 +32,7 @@ pub const BOOTLOAD_FLAG_ADDRESS: u32 = 0x2000_0000;
 /// but you could also check GPIOs etc here.
 ///
 /// Ensure any state change to the peripherals is reset before returning from this function.
-pub fn should_enter_bootloader(peripherals: &mut stm32f407::Peripherals) -> bool {
+pub fn should_enter_bootloader(peripherals: &mut stm32f7x7::Peripherals) -> bool {
     // Our plan is:
     // * If the reset was a software reset, and the magic flag is in the magic location,
     //   then the user firmware requested bootload, so enter bootload.
@@ -60,7 +60,7 @@ pub fn should_enter_bootloader(peripherals: &mut stm32f407::Peripherals) -> bool
 ///
 /// You should enable 9 GPIOs used by the ethernet controller. All GPIO clocks are already enabled.
 /// This is also a sensible place to turn on an LED or similar to indicate bootloader mode.
-pub fn configure_gpio(peripherals: &mut stm32f407::Peripherals) {
+pub fn configure_gpio(peripherals: &mut stm32f7x7::Peripherals) {
     let gpioa = &peripherals.GPIOA;
     let gpiob = &peripherals.GPIOB;
     let gpioc = &peripherals.GPIOC;

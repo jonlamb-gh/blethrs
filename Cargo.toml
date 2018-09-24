@@ -19,9 +19,20 @@ rev = "21396867114d267da06f19cc54cc4a1883b900a5"
 default-features = false
 features = ["proto-ipv4", "socket-tcp"]
 
-[dependencies.stm32f4]
-version = "0.2.3"
-features = ["stm32f407", "rt"]
+#[dependencies.stm32f4]
+#version = "0.2.3"
+#features = ["stm32f407", "rt"]
+
+#[dependencies.stm32f767-hal]
+#version = "0.0.1"
+#git = "https://github.com/jonlamb-gh/stm32f767-hal.git"
+#branch = "master"
+
+[dependencies.stm32f7]
+git = "https://github.com/jonlamb-gh/stm32-rs.git"
+branch = "stm32f767zit6-patches"
+version = "0.2.2"
+features = ["stm32f7x7", "rt"]
 
 [profile.dev]
 codegen-units = 1

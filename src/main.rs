@@ -7,12 +7,14 @@ extern crate cortex_m;
 extern crate cortex_m_semihosting;
 extern crate panic_abort;
 
-extern crate stm32f4;
+//extern crate stm32f4;
+extern crate stm32f7;
 
 extern crate smoltcp;
 extern crate byteorder;
 
-use stm32f4::stm32f407;
+//use stm32f4::stm32f407;
+use stm32f7::stm32f7x7;
 use cortex_m_rt::{entry, exception};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -67,7 +69,7 @@ mod build_info {
 }
 
 /// Set up PLL to 168MHz from 16MHz HSI
-fn rcc_init(peripherals: &mut stm32f407::Peripherals) {
+fn rcc_init(peripherals: &mut stm32f7x7::Peripherals) {
     let rcc = &peripherals.RCC;
     let flash = &peripherals.FLASH;
     let syscfg = &peripherals.SYSCFG;
@@ -115,9 +117,9 @@ fn rcc_init(peripherals: &mut stm32f407::Peripherals) {
 
     // Flash setup: I$ and D$ enabled, prefetch enabled, 5 wait states (OK for 3.3V at 168MHz)
     flash.acr.write(|w| unsafe {
-        w.icen().set_bit()
-         .dcen().set_bit()
-         .prften().set_bit()
+        //w.icen().set_bit()
+        //.dcen().set_bit()
+        w.prften().set_bit()
          .latency().bits(5)
     });
 
@@ -145,7 +147,7 @@ fn rcc_init(peripherals: &mut stm32f407::Peripherals) {
 }
 
 /// Set up the systick to provide a 1ms timebase
-fn systick_init(syst: &mut stm32f407::SYST) {
+fn systick_init(syst: &mut stm32f7x7::SYST) {
     syst.set_reload((168_000_000 / 8) / 1000);
     syst.clear_current();
     syst.set_clock_source(cortex_m::peripheral::syst::SystClkSource::External);
@@ -155,8 +157,8 @@ fn systick_init(syst: &mut stm32f407::SYST) {
 
 #[entry]
 fn main() -> ! {
-    let mut peripherals = stm32f407::Peripherals::take().unwrap();
-    let mut core_peripherals = stm32f407::CorePeripherals::take().unwrap();
+    let mut peripherals = stm32f7x7::Peripherals::take().unwrap();
+    let mut core_peripherals = stm32f7x7::CorePeripherals::take().unwrap();
 
     // Jump to user code if it exists and hasn't asked us to run
     match flash::valid_user_code() {

@@ -1,5 +1,5 @@
 use core;
-use stm32f407;
+use stm32f7x7;
 
 use core::fmt;
 use ::{Error, Result};
@@ -10,10 +10,10 @@ const CONFIG_MAGIC: u32 = 0x67797870;
 use ::config::{FLASH_SECTOR_ADDRESSES, FLASH_END, FLASH_CONFIG, FLASH_USER};
 
 
-static mut FLASH: Option<stm32f407::FLASH> = None;
+static mut FLASH: Option<stm32f7x7::FLASH> = None;
 
 /// Call to move the flash peripheral into this module
-pub fn init(flash: stm32f407::FLASH) {
+pub fn init(flash: stm32f7x7::FLASH) {
     unsafe { FLASH = Some(flash) };
 }
 
@@ -60,7 +60,7 @@ pub static DEFAULT_CONFIG: UserConfig = UserConfig {
 impl UserConfig {
     /// Attempt to read the UserConfig from flash sector 3 at 0x0800_C000.
     /// If a valid config cannot be read, the default one is returned instead.
-    pub fn get(crc: &mut stm32f407::CRC) -> Option<UserConfig> {
+    pub fn get(crc: &mut stm32f7x7::CRC) -> Option<UserConfig> {
         // Read config from flash
         let adr = FLASH_CONFIG as *const u32;
         let cfg = unsafe { *(FLASH_CONFIG as *const UserConfig) };
@@ -130,7 +130,7 @@ fn check_length_correct(length: usize, data: &[u8]) -> Result<()> {
 }
 
 /// Try to get the FLASH peripheral
-fn get_flash_peripheral() -> Result<&'static mut stm32f407::FLASH> {
+fn get_flash_peripheral() -> Result<&'static mut stm32f7x7::FLASH> {
     match unsafe { FLASH.as_mut() } {
         Some(flash) => Ok(flash),
         None => Err(Error::InternalError),
@@ -138,7 +138,7 @@ fn get_flash_peripheral() -> Result<&'static mut stm32f407::FLASH> {
 }
 
 /// Try to unlock flash
-fn unlock(flash: &mut stm32f407::FLASH) -> Result<()> {
+fn unlock(flash: &mut stm32f7x7::FLASH) -> Result<()> {
     // Wait for any ongoing operations
     while flash.sr.read().bsy().bit_is_set() {}
 
@@ -154,7 +154,7 @@ fn unlock(flash: &mut stm32f407::FLASH) -> Result<()> {
 }
 
 /// Lock flash
-fn lock(flash: &mut stm32f407::FLASH) {
+fn lock(flash: &mut stm32f7x7::FLASH) {
     flash.cr.write(|w| w.lock().locked());
 }
 

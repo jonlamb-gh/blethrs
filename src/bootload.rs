@@ -1,6 +1,6 @@
 use core;
 use cortex_m;
-use stm32f407;
+use stm32f7x7;
 
 static mut USER_RESET: Option<extern "C" fn()> = None;
 use ::config::{BOOTLOAD_FLAG_VALUE, BOOTLOAD_FLAG_ADDRESS};
@@ -8,7 +8,7 @@ use ::config::{BOOTLOAD_FLAG_VALUE, BOOTLOAD_FLAG_ADDRESS};
 /// Returns true if the most recent reset was due to a software request
 ///
 /// Clears the reset cause before returning, so this answer is only valid once.
-pub fn was_software_reset(rcc: &mut stm32f407::RCC) -> bool {
+pub fn was_software_reset(rcc: &mut stm32f7x7::RCC) -> bool {
     let result = rcc.csr.read().sftrstf().bit_is_set();
     rcc.csr.modify(|_, w| w.rmvf().set_bit());
     result

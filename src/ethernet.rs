@@ -1,6 +1,6 @@
 use core;
 use cortex_m;
-use stm32f407;
+use stm32f7x7;
 
 use smoltcp::{self, phy::{self, DeviceCapabilities}, time::Instant, wire::EthernetAddress};
 
@@ -214,8 +214,8 @@ impl RDesRing {
 pub struct EthernetDevice {
     rdring: &'static mut RDesRing,
     tdring: &'static mut TDesRing,
-    eth_mac: stm32f407::ETHERNET_MAC,
-    eth_dma: stm32f407::ETHERNET_DMA,
+    eth_mac: stm32f7x7::ETHERNET_MAC,
+    eth_dma: stm32f7x7::ETHERNET_DMA,
 }
 
 static mut BUFFERS_USED: bool = false;
@@ -226,7 +226,7 @@ impl EthernetDevice {
     /// You must move in ETH_MAC, ETH_DMA, and they are then kept by the device.
     ///
     /// You may only call this function once; subsequent calls will panic.
-    pub fn new(eth_mac: stm32f407::ETHERNET_MAC, eth_dma: stm32f407::ETHERNET_DMA)
+    pub fn new(eth_mac: stm32f7x7::ETHERNET_MAC, eth_dma: stm32f7x7::ETHERNET_DMA)
     -> EthernetDevice {
         cortex_m::interrupt::free(|_| unsafe {
             if BUFFERS_USED {
@@ -243,7 +243,7 @@ impl EthernetDevice {
     /// and configures the ETH MAC and DMA peripherals.
     ///
     /// Brings up the PHY and then blocks waiting for a network link.
-    pub fn init(&mut self, rcc: &mut stm32f407::RCC, addr: EthernetAddress) {
+    pub fn init(&mut self, rcc: &mut stm32f7x7::RCC, addr: EthernetAddress) {
         self.tdring.init();
         self.rdring.init();
 
@@ -276,7 +276,7 @@ impl EthernetDevice {
     }
 
     /// Sets up the device peripherals.
-    fn init_peripherals(&mut self, rcc: &mut stm32f407::RCC, mac: EthernetAddress) {
+    fn init_peripherals(&mut self, rcc: &mut stm32f7x7::RCC, mac: EthernetAddress) {
         // Reset ETH_MAC and ETH_DMA
         rcc.ahb1rstr.modify(|_, w| w.ethmacrst().reset());
         rcc.ahb1rstr.modify(|_, w| w.ethmacrst().clear_bit());
