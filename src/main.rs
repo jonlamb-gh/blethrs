@@ -5,7 +5,8 @@ extern crate cortex_m_rt;
 
 extern crate cortex_m;
 extern crate cortex_m_semihosting;
-extern crate panic_abort;
+//extern crate panic_abort;
+extern crate panic_semihosting;
 
 //extern crate stm32f4;
 extern crate stm32f7;
@@ -150,7 +151,8 @@ fn rcc_init(peripherals: &mut stm32f7x7::Peripherals) {
 fn systick_init(syst: &mut stm32f7x7::SYST) {
     syst.set_reload((168_000_000 / 8) / 1000);
     syst.clear_current();
-    syst.set_clock_source(cortex_m::peripheral::syst::SystClkSource::External);
+    //syst.set_clock_source(cortex_m::peripheral::syst::SystClkSource::External);
+    syst.set_clock_source(cortex_m::peripheral::syst::SystClkSource::Core);
     syst.enable_interrupt();
     syst.enable_counter();
 }
@@ -175,6 +177,11 @@ fn main() -> ! {
     println!("| Built on {}", build_info::BUILT_TIME_UTC);
     println!("| {}", build_info::RUSTC_VERSION);
     println!("|-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n");
+
+    core_peripherals.SCB.enable_icache();
+    core_peripherals
+        .SCB
+        .enable_dcache(&mut core_peripherals.CPUID);
 
     print!(  " Initialising clocks...               ");
     rcc_init(&mut peripherals);

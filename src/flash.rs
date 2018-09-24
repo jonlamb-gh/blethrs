@@ -49,9 +49,9 @@ impl fmt::Display for UserConfig {
 pub static DEFAULT_CONFIG: UserConfig = UserConfig {
     // Locally administered MAC
     magic: 0,
-    mac_address: [0x02, 0x00, 0x01, 0x02, 0x03, 0x04],
-    ip_address: [10, 1, 1, 10],
-    ip_gateway: [10, 1, 1, 1],
+    mac_address: [0x02, 0x00, 0x05, 0x06, 0x07, 0x08],
+    ip_address: [192, 168, 1, 39],
+    ip_gateway: [192, 168, 1, 1],
     ip_prefix: 24,
     _padding: [0u8; 1],
     checksum: 0,

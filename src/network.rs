@@ -44,10 +44,10 @@ fn send_status(socket: &mut TcpSocket, status: ::Error) {
 /// Respond to the information request command with our build information.
 fn cmd_info(socket: &mut TcpSocket) {
 
-    // Read the device unique ID
-    let id1: u32 = unsafe { *(0x1FFF_7A10 as *const u32) };
-    let id2: u32 = unsafe { *(0x1FFF_7A14 as *const u32) };
-    let id3: u32 = unsafe { *(0x1FFF_7A18 as *const u32) };
+    // Read the device unique ID, see 45.6
+    let id1: u32 = unsafe { *(0x1FF0_F420 as *const u32) };
+    let id2: u32 = unsafe { *(0x1FF0_F424 as *const u32) };
+    let id3: u32 = unsafe { *(0x1FF0_F428 as *const u32) };
 
     send_status(socket, Error::Success);
     write!(socket, "blethrs {} {}\r\nBuilt: {}\r\nCompiler: {}\r\nMCU ID: {:08X}{:08X}{:08X}\r\n",

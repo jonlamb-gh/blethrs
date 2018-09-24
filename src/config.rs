@@ -65,6 +65,7 @@ pub fn configure_gpio(peripherals: &mut stm32f7x7::Peripherals) {
     let gpiob = &peripherals.GPIOB;
     let gpioc = &peripherals.GPIOC;
     let gpioe = &peripherals.GPIOE;
+    let gpiog = &peripherals.GPIOG;
 
     // Status LED
     gpioe.moder.modify(|_, w| w.moder7().output());
@@ -72,8 +73,9 @@ pub fn configure_gpio(peripherals: &mut stm32f7x7::Peripherals) {
 
     // Configure ethernet related GPIO:
     // GPIOA 1, 2, 7
+    // GPIOB 13 (why 11 and 12?)
     // GPIOC 1, 4, 5
-    // GPIOG 11, 13, 14
+    // GPIOG 2, 11, 13
     // All set to AF11 and very high speed.
     gpioa.moder.modify(|_, w|
         w.moder1().alternate()
@@ -87,6 +89,10 @@ pub fn configure_gpio(peripherals: &mut stm32f7x7::Peripherals) {
         w.moder1().alternate()
          .moder4().alternate()
          .moder5().alternate());
+    gpiog.moder.modify(|_, w|
+        w.moder2().alternate()
+         .moder11().alternate()
+         .moder13().alternate());
     gpioa.ospeedr.modify(|_, w|
         w.ospeedr1().very_high_speed()
          .ospeedr2().very_high_speed()
@@ -99,6 +105,10 @@ pub fn configure_gpio(peripherals: &mut stm32f7x7::Peripherals) {
         w.ospeedr1().very_high_speed()
          .ospeedr4().very_high_speed()
          .ospeedr5().very_high_speed());
+    gpiog.ospeedr.modify(|_, w|
+        w.ospeedr2().very_high_speed()
+         .ospeedr11().very_high_speed()
+         .ospeedr13().very_high_speed());
     gpioa.afrl.modify(|_, w|
         w.afrl1().af11()
          .afrl2().af11()
@@ -111,4 +121,9 @@ pub fn configure_gpio(peripherals: &mut stm32f7x7::Peripherals) {
         w.afrl1().af11()
          .afrl4().af11()
          .afrl5().af11());
+    gpiog.afrl.modify(|_, w|
+        w.afrl2().af11());
+    gpiog.afrh.modify(|_, w|
+         w.afrh11().af11()
+         .afrh13().af11());
 }
