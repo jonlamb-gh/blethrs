@@ -3,7 +3,7 @@ use cortex_m;
 use stm32f7x7;
 
 static mut USER_RESET: Option<extern "C" fn()> = None;
-use ::config::{BOOTLOAD_FLAG_VALUE, BOOTLOAD_FLAG_ADDRESS};
+use config::{BOOTLOAD_FLAG_ADDRESS, BOOTLOAD_FLAG_VALUE};
 
 /// Returns true if the most recent reset was due to a software request
 ///
@@ -31,14 +31,15 @@ fn clear_flag() {
     });
 }
 
-/// Trigger a reset that will cause us to bootload the user application next go around
+/// Trigger a reset that will cause us to bootload the user application next go
+/// around
 pub fn reset_bootload() {
     clear_flag();
     // It's troublesome to require SCB be passed in here, and
     // we're literally about to reset the whole microcontroller,
     // so safety is not such a huge concern.
     let aircr = 0xE000ED0C as *mut u32;
-    unsafe { *aircr = (0x5FA<<16) | (1<<2) };
+    unsafe { *aircr = (0x5FA << 16) | (1 << 2) };
 }
 
 /// Jump to user code at the given address.

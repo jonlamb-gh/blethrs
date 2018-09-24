@@ -1,19 +1,19 @@
 use core::fmt::Write;
 
 use smoltcp;
+use smoltcp::iface::{EthernetInterface, EthernetInterfaceBuilder, Neighbor, NeighborCache};
+use smoltcp::socket::{SocketHandle, SocketSet, SocketSetItem, TcpSocket, TcpSocketBuffer};
 use smoltcp::time::Instant;
 use smoltcp::wire::{EthernetAddress, IpAddress, IpCidr};
-use smoltcp::iface::{Neighbor, NeighborCache, EthernetInterface, EthernetInterfaceBuilder};
-use smoltcp::socket::{SocketSet, SocketSetItem, SocketHandle, TcpSocket, TcpSocketBuffer};
 
 use cortex_m;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use ::flash;
-use ::build_info;
-use ::Error;
+use build_info;
 use ethernet::EthernetDevice;
+use flash;
+use Error;
 
 const CMD_INFO: u32 = 0;
 const CMD_READ: u32 = 1;
@@ -21,7 +21,7 @@ const CMD_ERASE: u32 = 2;
 const CMD_WRITE: u32 = 3;
 const CMD_BOOT: u32 = 4;
 
-use ::config::TCP_PORT;
+use config::TCP_PORT;
 
 /// Read an address and length from the socket
 fn read_adr_len(socket: &mut TcpSocket) -> (u32, usize) {
@@ -43,16 +43,23 @@ fn send_status(socket: &mut TcpSocket, status: ::Error) {
 
 /// Respond to the information request command with our build information.
 fn cmd_info(socket: &mut TcpSocket) {
-
     // Read the device unique ID, see 45.6
     let id1: u32 = unsafe { *(0x1FF0_F420 as *const u32) };
     let id2: u32 = unsafe { *(0x1FF0_F424 as *const u32) };
     let id3: u32 = unsafe { *(0x1FF0_F428 as *const u32) };
 
     send_status(socket, Error::Success);
-    write!(socket, "blethrs {} {}\r\nBuilt: {}\r\nCompiler: {}\r\nMCU ID: {:08X}{:08X}{:08X}\r\n",
-           build_info::PKG_VERSION, build_info::GIT_VERSION.unwrap(), build_info::BUILT_TIME_UTC,
-           build_info::RUSTC_VERSION, id3, id2, id1).ok();
+    write!(
+        socket,
+        "blethrs {} {}\r\nBuilt: {}\r\nCompiler: {}\r\nMCU ID: {:08X}{:08X}{:08X}\r\n",
+        build_info::PKG_VERSION,
+        build_info::GIT_VERSION.unwrap(),
+        build_info::BUILT_TIME_UTC,
+        build_info::RUSTC_VERSION,
+        id3,
+        id2,
+        id1
+    ).ok();
 }
 
 fn cmd_read(socket: &mut TcpSocket) {
@@ -61,7 +68,7 @@ fn cmd_read(socket: &mut TcpSocket) {
         Ok(data) => {
             send_status(socket, Error::Success);
             socket.send_slice(data).unwrap();
-        },
+        }
         Err(err) => send_status(socket, err),
     };
 }
@@ -140,11 +147,13 @@ pub fn init<'a>(eth_dev: EthernetDevice, mac_addr: EthernetAddress, ip_addr: IpC
         let neighbor_cache = NeighborCache::new(&mut NETWORK.neighbor_cache_storage.as_mut()[..]);
 
         NETWORK.ip_addr = Some([ip_addr]);
-        NETWORK.eth_iface = Some(EthernetInterfaceBuilder::new(eth_dev)
-                                .ethernet_addr(mac_addr)
-                                .neighbor_cache(neighbor_cache)
-                                .ip_addrs(&mut NETWORK.ip_addr.as_mut().unwrap()[..])
-                                .finalize());
+        NETWORK.eth_iface = Some(
+            EthernetInterfaceBuilder::new(eth_dev)
+                .ethernet_addr(mac_addr)
+                .neighbor_cache(neighbor_cache)
+                .ip_addrs(&mut NETWORK.ip_addr.as_mut().unwrap()[..])
+                .finalize(),
+        );
 
         NETWORK.sockets = Some(SocketSet::new(&mut NETWORK.sockets_storage.as_mut()[..]));
         let tcp_rx_buf = TcpSocketBuffer::new(&mut NETWORK_BUFFERS.tcp_rx_buf.as_mut()[..]);
@@ -183,11 +192,11 @@ pub fn poll(time_ms: i64) {
                 socket.recv_slice(&mut cmd[..]).ok();
                 let cmd = LittleEndian::read_u32(&cmd[..]);
                 match cmd {
-                   CMD_INFO  => cmd_info(&mut socket),
-                   CMD_READ => cmd_read(&mut socket),
-                   CMD_ERASE => cmd_erase(&mut socket),
-                   CMD_WRITE => cmd_write(&mut socket),
-                   CMD_BOOT => cmd_boot(&mut socket),
+                    CMD_INFO => cmd_info(&mut socket),
+                    CMD_READ => cmd_read(&mut socket),
+                    CMD_ERASE => cmd_erase(&mut socket),
+                    CMD_WRITE => cmd_write(&mut socket),
+                    CMD_BOOT => cmd_boot(&mut socket),
                     _ => (),
                 };
                 socket.close();

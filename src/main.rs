@@ -11,12 +11,12 @@ extern crate panic_semihosting;
 //extern crate stm32f4;
 extern crate stm32f7;
 
-extern crate smoltcp;
 extern crate byteorder;
+extern crate smoltcp;
 
 //use stm32f4::stm32f407;
-use stm32f7::stm32f7x7;
 use cortex_m_rt::{entry, exception};
+use stm32f7::stm32f7x7;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Error {
@@ -57,11 +57,11 @@ macro_rules! println {
     ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
 }
 
+mod bootload;
 mod config;
 mod ethernet;
-mod network;
 mod flash;
-mod bootload;
+mod network;
 
 // Pull in build information (from `built` crate)
 mod build_info {
@@ -77,15 +77,15 @@ fn rcc_init(peripherals: &mut stm32f7x7::Peripherals) {
 
     // Reset all peripherals
     rcc.ahb1rstr.write(|w| unsafe { w.bits(0xFFFF_FFFF) });
-    rcc.ahb1rstr.write(|w| unsafe { w.bits(0)});
+    rcc.ahb1rstr.write(|w| unsafe { w.bits(0) });
     rcc.ahb2rstr.write(|w| unsafe { w.bits(0xFFFF_FFFF) });
-    rcc.ahb2rstr.write(|w| unsafe { w.bits(0)});
+    rcc.ahb2rstr.write(|w| unsafe { w.bits(0) });
     rcc.ahb3rstr.write(|w| unsafe { w.bits(0xFFFF_FFFF) });
-    rcc.ahb3rstr.write(|w| unsafe { w.bits(0)});
+    rcc.ahb3rstr.write(|w| unsafe { w.bits(0) });
     rcc.apb1rstr.write(|w| unsafe { w.bits(0xFFFF_FFFF) });
-    rcc.apb1rstr.write(|w| unsafe { w.bits(0)});
+    rcc.apb1rstr.write(|w| unsafe { w.bits(0) });
     rcc.apb2rstr.write(|w| unsafe { w.bits(0xFFFF_FFFF) });
-    rcc.apb2rstr.write(|w| unsafe { w.bits(0)});
+    rcc.apb2rstr.write(|w| unsafe { w.bits(0) });
 
     // Ensure HSI is on and stable
     rcc.cr.modify(|_, w| w.hsion().set_bit());
@@ -101,27 +101,30 @@ fn rcc_init(peripherals: &mut stm32f7x7::Peripherals) {
 
     // Configure PLL: 16MHz /8 *168 /2, source HSI
     rcc.pllcfgr.write(|w| unsafe {
-        w.pllq().bits(4)
-         .pllsrc().hsi()
-         .pllp().div2()
-         .plln().bits(168)
-         .pllm().bits(8)
+        w.pllq()
+            .bits(4)
+            .pllsrc()
+            .hsi()
+            .pllp()
+            .div2()
+            .plln()
+            .bits(168)
+            .pllm()
+            .bits(8)
     });
     // Activate PLL
     rcc.cr.modify(|_, w| w.pllon().set_bit());
 
     // Set other clock domains: PPRE2 to /2, PPRE1 to /4, HPRE to /1
-    rcc.cfgr.modify(|_, w|
-        w.ppre2().div2()
-         .ppre1().div4()
-         .hpre().div1());
+    rcc.cfgr
+        .modify(|_, w| w.ppre2().div2().ppre1().div4().hpre().div1());
 
-    // Flash setup: I$ and D$ enabled, prefetch enabled, 5 wait states (OK for 3.3V at 168MHz)
+    // Flash setup: I$ and D$ enabled, prefetch enabled, 5 wait states (OK for 3.3V
+    // at 168MHz)
     flash.acr.write(|w| unsafe {
         //w.icen().set_bit()
         //.dcen().set_bit()
-        w.prften().set_bit()
-         .latency().bits(5)
+        w.prften().set_bit().latency().bits(5)
     });
 
     // Swap system clock to PLL
@@ -133,18 +136,28 @@ fn rcc_init(peripherals: &mut stm32f7x7::Peripherals) {
     syscfg.pmc.modify(|_, w| w.mii_rmii_sel().set_bit());
 
     // Set up peripheral clocks
-    rcc.ahb1enr.modify(|_, w|
-        w.gpioaen().enabled()
-         .gpioben().enabled()
-         .gpiocen().enabled()
-         .gpioden().enabled()
-         .gpioeen().enabled()
-         .gpiogen().enabled()
-         .crcen().enabled()
-         .ethmacrxen().enabled()
-         .ethmactxen().enabled()
-         .ethmacen().enabled()
-    );
+    rcc.ahb1enr.modify(|_, w| {
+        w.gpioaen()
+            .enabled()
+            .gpioben()
+            .enabled()
+            .gpiocen()
+            .enabled()
+            .gpioden()
+            .enabled()
+            .gpioeen()
+            .enabled()
+            .gpiogen()
+            .enabled()
+            .crcen()
+            .enabled()
+            .ethmacrxen()
+            .enabled()
+            .ethmactxen()
+            .enabled()
+            .ethmacen()
+            .enabled()
+    });
 }
 
 /// Set up the systick to provide a 1ms timebase
@@ -172,7 +185,11 @@ fn main() -> ! {
 
     println!("");
     println!("|-=-=-=-=-=-=-=-=-= blethrs =-=-=-=-=-=-=-=-=-");
-    println!("| Version {} {}", build_info::PKG_VERSION, build_info::GIT_VERSION.unwrap());
+    println!(
+        "| Version {} {}",
+        build_info::PKG_VERSION,
+        build_info::GIT_VERSION.unwrap()
+    );
     println!("| Platform {}", build_info::TARGET);
     println!("| Built on {}", build_info::BUILT_TIME_UTC);
     println!("| {}", build_info::RUSTC_VERSION);
@@ -183,36 +200,39 @@ fn main() -> ! {
         .SCB
         .enable_dcache(&mut core_peripherals.CPUID);
 
-    print!(  " Initialising clocks...               ");
+    print!(" Initialising clocks...               ");
     rcc_init(&mut peripherals);
     println!("OK");
 
-    print!(  " Initialising GPIOs...                ");
+    print!(" Initialising GPIOs...                ");
     config::configure_gpio(&mut peripherals);
     println!("OK");
 
-    print!(  " Reading configuration...             ");
+    print!(" Reading configuration...             ");
     let cfg = match flash::UserConfig::get(&mut peripherals.CRC) {
-        Some(cfg) => { println!("OK"); cfg },
+        Some(cfg) => {
+            println!("OK");
+            cfg
+        }
         None => {
             println!("Err\nCouldn't read configuration, using default.");
             flash::DEFAULT_CONFIG
-        },
+        }
     };
     println!("{}", cfg);
     let mac_addr = smoltcp::wire::EthernetAddress::from_bytes(&cfg.mac_address);
 
-    print!(  " Initialising Ethernet...             ");
-    let mut ethdev = ethernet::EthernetDevice::new(
-        peripherals.ETHERNET_MAC, peripherals.ETHERNET_DMA);
+    print!(" Initialising Ethernet...             ");
+    let mut ethdev =
+        ethernet::EthernetDevice::new(peripherals.ETHERNET_MAC, peripherals.ETHERNET_DMA);
     ethdev.init(&mut peripherals.RCC, mac_addr.clone());
     println!("OK");
 
-    print!(  " Waiting for link...                  ");
+    print!(" Waiting for link...                  ");
     ethdev.block_until_link();
     println!("OK");
 
-    print!(  " Initialising network...              ");
+    print!(" Initialising network...              ");
     let ip_addr = smoltcp::wire::Ipv4Address::from_bytes(&cfg.ip_address);
     let ip_cidr = smoltcp::wire::Ipv4Cidr::new(ip_addr, cfg.ip_prefix);
     let cidr = smoltcp::wire::IpCidr::Ipv4(ip_cidr);

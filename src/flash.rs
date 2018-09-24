@@ -1,14 +1,14 @@
+// TODO - this has NOT been verified on the stm32f7 yet, likely won't work out
+// of box
 use core;
 use stm32f7x7;
 
 use core::fmt;
-use ::{Error, Result};
-
+use {Error, Result};
 
 const CONFIG_MAGIC: u32 = 0x67797870;
 
-use ::config::{FLASH_SECTOR_ADDRESSES, FLASH_END, FLASH_CONFIG, FLASH_USER};
-
+use config::{FLASH_CONFIG, FLASH_END, FLASH_SECTOR_ADDRESSES, FLASH_USER};
 
 static mut FLASH: Option<stm32f7x7::FLASH> = None;
 
@@ -18,9 +18,10 @@ pub fn init(flash: stm32f7x7::FLASH) {
 }
 
 /// User configuration. Must live in flash at FLASH_CONFIG, 0x0800_C000.
-/// `magic` must be set to 0x67797870. `checksum` must be the CRC32 of the preceeding bytes.
-#[derive(Copy,Clone)]
-#[repr(C,packed)]
+/// `magic` must be set to 0x67797870. `checksum` must be the CRC32 of the
+/// preceeding bytes.
+#[derive(Copy, Clone)]
+#[repr(C, packed)]
 pub struct UserConfig {
     magic: u32,
     pub mac_address: [u8; 6],
@@ -34,14 +35,30 @@ pub struct UserConfig {
 impl fmt::Display for UserConfig {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "UserConfig:")?;
-        writeln!(f, "  MAC Address: {:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
-                 self.mac_address[0], self.mac_address[1], self.mac_address[2],
-                 self.mac_address[3], self.mac_address[4], self.mac_address[5])?;
-        writeln!(f, "  IP Address: {}.{}.{}.{}/{}",
-                 self.ip_address[0], self.ip_address[1], self.ip_address[2], self.ip_address[3],
-                 self.ip_prefix)?;
-        writeln!(f, "  Gateway: {}.{}.{}.{}",
-                 self.ip_gateway[0], self.ip_gateway[1], self.ip_gateway[2], self.ip_gateway[3])?;
+        writeln!(
+            f,
+            "  MAC Address: {:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
+            self.mac_address[0],
+            self.mac_address[1],
+            self.mac_address[2],
+            self.mac_address[3],
+            self.mac_address[4],
+            self.mac_address[5]
+        )?;
+        writeln!(
+            f,
+            "  IP Address: {}.{}.{}.{}/{}",
+            self.ip_address[0],
+            self.ip_address[1],
+            self.ip_address[2],
+            self.ip_address[3],
+            self.ip_prefix
+        )?;
+        writeln!(
+            f,
+            "  Gateway: {}.{}.{}.{}",
+            self.ip_gateway[0], self.ip_gateway[1], self.ip_gateway[2], self.ip_gateway[3]
+        )?;
         writeln!(f, "  Checksum: {:08X}", self.checksum as u32)
     }
 }
@@ -104,7 +121,7 @@ fn check_address_valid(address: u32, length: usize) -> Result<()> {
         Err(Error::InvalidAddress)
     } else if address > (FLASH_END - length as u32 + 1) {
         Err(Error::InvalidAddress)
-    } else{
+    } else {
         Ok(())
     }
 }
@@ -169,10 +186,11 @@ pub fn erase(address: u32, length: usize) -> Result<()> {
             Some(adr) => *adr - 1,
             None => FLASH_END,
         };
-        if (address_start >= sector_start && address_start <= sector_end) ||
-           (address_end   >= sector_start && address_end   <= sector_end) ||
-           (address_start <= sector_start && address_end   >= sector_end) {
-               erase_sector(idx as u8)?;
+        if (address_start >= sector_start && address_start <= sector_end)
+            || (address_end >= sector_start && address_end <= sector_end)
+            || (address_start <= sector_start && address_end >= sector_end)
+        {
+            erase_sector(idx as u8)?;
         }
     }
     Ok(())
@@ -190,9 +208,9 @@ fn erase_sector(sector: u8) -> Result<()> {
     // UNSAFE: We've verified that `sector`<FLASH_SECTOR_ADDRESSES.len(),
     // which is is the number of sectors.
     unsafe {
-        flash.cr.write(|w| w.lock().unlocked()
-                            .ser().sector_erase()
-                            .snb().bits(sector));
+        flash
+            .cr
+            .write(|w| w.lock().unlocked().ser().sector_erase().snb().bits(sector));
         flash.cr.modify(|_, w| w.strt().start());
     }
 
@@ -219,9 +237,7 @@ pub fn read(address: u32, length: usize) -> Result<&'static [u8]> {
     check_address_valid(address, length)?;
     check_length_valid(length)?;
     let address = address as *const _;
-    unsafe {
-        Ok(core::slice::from_raw_parts::<'static, u8>(address, length))
-    }
+    unsafe { Ok(core::slice::from_raw_parts::<'static, u8>(address, length)) }
 }
 
 /// Write to flash.
@@ -236,17 +252,16 @@ pub fn write(address: u32, length: usize, data: &[u8]) -> Result<()> {
 
     // Set parallelism to write in 32 bit chunks, and enable programming.
     // Note reset value has 1 for lock so we need to explicitly clear it.
-    flash.cr.write(|w| w.lock().unlocked()
-                        .psize().psize32()
-                        .pg().program());
+    flash
+        .cr
+        .write(|w| w.lock().unlocked().psize().psize32().pg().program());
 
     for idx in 0..(length / 4) {
         let offset = idx * 4;
-        let word: u32 =
-              (data[offset]   as u32)
-            | (data[offset+1] as u32) << 8
-            | (data[offset+2] as u32) << 16
-            | (data[offset+3] as u32) << 24;
+        let word: u32 = (data[offset] as u32)
+            | (data[offset + 1] as u32) << 8
+            | (data[offset + 2] as u32) << 16
+            | (data[offset + 3] as u32) << 24;
         let write_address = (address + offset as u32) as *mut u32;
         unsafe { core::ptr::write_volatile(write_address, word) };
 
@@ -255,8 +270,11 @@ pub fn write(address: u32, length: usize, data: &[u8]) -> Result<()> {
 
         // Check for errors
         let sr = flash.sr.read();
-        if sr.pgserr().bit_is_set() || sr.pgperr().bit_is_set() ||
-           sr.pgaerr().bit_is_set() || sr.wrperr().bit_is_set() {
+        if sr.pgserr().bit_is_set()
+            || sr.pgperr().bit_is_set()
+            || sr.pgaerr().bit_is_set()
+            || sr.wrperr().bit_is_set()
+        {
             lock(flash);
             return Err(Error::WriteError);
         }

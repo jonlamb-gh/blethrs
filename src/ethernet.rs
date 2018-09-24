@@ -2,13 +2,18 @@ use core;
 use cortex_m;
 use stm32f7x7;
 
-use smoltcp::{self, phy::{self, DeviceCapabilities}, time::Instant, wire::EthernetAddress};
+use smoltcp::{
+    self,
+    phy::{self, DeviceCapabilities},
+    time::Instant,
+    wire::EthernetAddress,
+};
 
 const ETH_BUF_SIZE: usize = 1536;
 const ETH_NUM_TD: usize = 4;
 const ETH_NUM_RD: usize = 4;
 
-use ::config::ETH_PHY_ADDR;
+use config::ETH_PHY_ADDR;
 
 /// Transmit Descriptor representation
 ///
@@ -17,10 +22,11 @@ use ::config::ETH_PHY_ADDR;
 /// * tdes2: transmit buffer address
 /// * tdes3: not used
 ///
-/// Note that Copy and Clone are derived to support initialising an array of TDes,
-/// but you may not move a TDes after its address has been given to the ETH_DMA engine.
-#[derive(Copy,Clone)]
-#[repr(C,packed)]
+/// Note that Copy and Clone are derived to support initialising an array of
+/// TDes, but you may not move a TDes after its address has been given to the
+/// ETH_DMA engine.
+#[derive(Copy, Clone)]
+#[repr(C, packed)]
 struct TDes {
     tdes0: u32,
     tdes1: u32,
@@ -32,7 +38,7 @@ impl TDes {
     /// Initialises this TDes to point at the given buffer.
     pub fn init(&mut self, tdbuf: &[u32]) {
         // Set FS and LS on each descriptor: each will hold a single full segment.
-        self.tdes0 = (1<<29) | (1<<28);
+        self.tdes0 = (1 << 29) | (1 << 28);
         // Store pointer to associated buffer.
         self.tdes2 = tdbuf.as_ptr() as u32;
         // No second buffer.
@@ -41,17 +47,17 @@ impl TDes {
 
     /// Mark this TDes as end-of-ring.
     pub fn set_end_of_ring(&mut self) {
-        self.tdes0 |= 1<<21;
+        self.tdes0 |= 1 << 21;
     }
 
     /// Return true if the RDes is not currently owned by the DMA
     pub fn available(&self) -> bool {
-        self.tdes0 & (1<<31) == 0
+        self.tdes0 & (1 << 31) == 0
     }
 
     /// Release this RDes back to DMA engine for transmission
     pub unsafe fn release(&mut self) {
-        self.tdes0 |= 1<<31;
+        self.tdes0 |= 1 << 31;
     }
 
     /// Set the length of data in the buffer pointed to by this TDes
@@ -68,21 +74,27 @@ impl TDes {
 /// Store a ring of TDes and associated buffers
 struct TDesRing {
     td: [TDes; ETH_NUM_TD],
-    tbuf: [[u32; ETH_BUF_SIZE/4]; ETH_NUM_TD],
+    tbuf: [[u32; ETH_BUF_SIZE / 4]; ETH_NUM_TD],
     tdidx: usize,
 }
 
 static mut TDESRING: TDesRing = TDesRing {
-    td: [TDes { tdes0: 0, tdes1: 0, tdes2: 0, tdes3: 0 }; ETH_NUM_TD],
-    tbuf: [[0; ETH_BUF_SIZE/4]; ETH_NUM_TD],
+    td: [TDes {
+        tdes0: 0,
+        tdes1: 0,
+        tdes2: 0,
+        tdes3: 0,
+    }; ETH_NUM_TD],
+    tbuf: [[0; ETH_BUF_SIZE / 4]; ETH_NUM_TD],
     tdidx: 0,
 };
 
 impl TDesRing {
     /// Initialise this TDesRing
     ///
-    /// The current memory address of the buffers inside this TDesRing will be stored in the
-    /// descriptors, so ensure the TDesRing is not moved after initialisation.
+    /// The current memory address of the buffers inside this TDesRing will be
+    /// stored in the descriptors, so ensure the TDesRing is not moved
+    /// after initialisation.
     pub fn init(&mut self) {
         for (td, tdbuf) in self.td.iter_mut().zip(self.tbuf.iter()) {
             td.init(&tdbuf[..]);
@@ -119,10 +131,11 @@ impl TDesRing {
 /// * rdes2: receive buffer address
 /// * rdes3: not used
 ///
-/// Note that Copy and Clone are derived to support initialising an array of TDes,
-/// but you may not move a TDes after its address has been given to the ETH_DMA engine.
-#[derive(Copy,Clone)]
-#[repr(C,packed)]
+/// Note that Copy and Clone are derived to support initialising an array of
+/// TDes, but you may not move a TDes after its address has been given to the
+/// ETH_DMA engine.
+#[derive(Copy, Clone)]
+#[repr(C, packed)]
 struct RDes {
     rdes0: u32,
     rdes1: u32,
@@ -134,7 +147,7 @@ impl RDes {
     /// Initialises this RDes to point at the given buffer.
     pub fn init(&mut self, rdbuf: &[u32]) {
         // Mark each RDes as owned by the DMA engine.
-        self.rdes0 = 1<<31;
+        self.rdes0 = 1 << 31;
         // Store length of and pointer to associated buffer.
         self.rdes1 = rdbuf.len() as u32 * 4;
         self.rdes2 = rdbuf.as_ptr() as u32;
@@ -144,17 +157,17 @@ impl RDes {
 
     /// Mark this RDes as end-of-ring.
     pub fn set_end_of_ring(&mut self) {
-        self.rdes1 |= 1<<15;
+        self.rdes1 |= 1 << 15;
     }
 
     /// Return true if the RDes is not currently owned by the DMA
     pub fn available(&self) -> bool {
-        self.rdes0 & (1<<31) == 0
+        self.rdes0 & (1 << 31) == 0
     }
 
     /// Release this RDes back to the DMA engine
     pub unsafe fn release(&mut self) {
-        self.rdes0 |= 1<<31;
+        self.rdes0 |= 1 << 31;
     }
 
     /// Access the buffer pointed to by this descriptor
@@ -166,21 +179,27 @@ impl RDes {
 /// Store a ring of RDes and associated buffers
 struct RDesRing {
     rd: [RDes; ETH_NUM_RD],
-    rbuf: [[u32; ETH_BUF_SIZE/4]; ETH_NUM_RD],
+    rbuf: [[u32; ETH_BUF_SIZE / 4]; ETH_NUM_RD],
     rdidx: usize,
 }
 
 static mut RDESRING: RDesRing = RDesRing {
-    rd: [RDes { rdes0: 0, rdes1: 0, rdes2: 0, rdes3: 0 }; ETH_NUM_RD],
-    rbuf: [[0; ETH_BUF_SIZE/4]; ETH_NUM_RD],
+    rd: [RDes {
+        rdes0: 0,
+        rdes1: 0,
+        rdes2: 0,
+        rdes3: 0,
+    }; ETH_NUM_RD],
+    rbuf: [[0; ETH_BUF_SIZE / 4]; ETH_NUM_RD],
     rdidx: 0,
 };
 
 impl RDesRing {
     /// Initialise this RDesRing
     ///
-    /// The current memory address of the buffers inside this TDesRing will be stored in the
-    /// descriptors, so ensure the TDesRing is not moved after initialisation.
+    /// The current memory address of the buffers inside this TDesRing will be
+    /// stored in the descriptors, so ensure the TDesRing is not moved
+    /// after initialisation.
     pub fn init(&mut self) {
         for (rd, rdbuf) in self.rd.iter_mut().zip(self.rbuf.iter()) {
             rd.init(&rdbuf[..]);
@@ -226,21 +245,28 @@ impl EthernetDevice {
     /// You must move in ETH_MAC, ETH_DMA, and they are then kept by the device.
     ///
     /// You may only call this function once; subsequent calls will panic.
-    pub fn new(eth_mac: stm32f7x7::ETHERNET_MAC, eth_dma: stm32f7x7::ETHERNET_DMA)
-    -> EthernetDevice {
+    pub fn new(
+        eth_mac: stm32f7x7::ETHERNET_MAC,
+        eth_dma: stm32f7x7::ETHERNET_DMA,
+    ) -> EthernetDevice {
         cortex_m::interrupt::free(|_| unsafe {
             if BUFFERS_USED {
                 panic!("EthernetDevice already created");
             }
             BUFFERS_USED = true;
-            EthernetDevice { rdring: &mut RDESRING, tdring: &mut TDESRING, eth_mac, eth_dma }
+            EthernetDevice {
+                rdring: &mut RDESRING,
+                tdring: &mut TDESRING,
+                eth_mac,
+                eth_dma,
+            }
         })
     }
 
     /// Initialise the ethernet driver.
     ///
-    /// Sets up the descriptor structures, sets up the peripheral clocks and GPIO configuration,
-    /// and configures the ETH MAC and DMA peripherals.
+    /// Sets up the descriptor structures, sets up the peripheral clocks and
+    /// GPIO configuration, and configures the ETH MAC and DMA peripherals.
     ///
     /// Brings up the PHY and then blocks waiting for a network link.
     pub fn init(&mut self, rcc: &mut stm32f7x7::RCC, addr: EthernetAddress) {
@@ -254,7 +280,7 @@ impl EthernetDevice {
     }
 
     pub fn link_established(&mut self) -> bool {
-        return self.phy_poll_link()
+        return self.phy_poll_link();
     }
 
     pub fn block_until_link(&mut self) {
@@ -285,51 +311,67 @@ impl EthernetDevice {
 
         // Set MAC address
         let mac = mac.as_bytes();
-        self.eth_mac.maca0lr.write(|w| w.maca0l().bits(
-            (mac[0] as u32) << 0 | (mac[1] as u32) << 8 |
-            (mac[2] as u32) <<16 | (mac[3] as u32) <<24));
-        self.eth_mac.maca0hr.write(|w| w.maca0h().bits(
-            (mac[4] as u16) << 0 | (mac[5] as u16) << 8));
+        self.eth_mac.maca0lr.write(|w| {
+            w.maca0l().bits(
+                (mac[0] as u32) << 0
+                    | (mac[1] as u32) << 8
+                    | (mac[2] as u32) << 16
+                    | (mac[3] as u32) << 24,
+            )
+        });
+        self.eth_mac
+            .maca0hr
+            .write(|w| w.maca0h().bits((mac[4] as u16) << 0 | (mac[5] as u16) << 8));
 
         // Enable RX and TX. We'll set link speed and duplex at link-up.
-        self.eth_mac.maccr.write(|w|
-            w.re().enabled()
-             .te().enabled()
-             .cstf().enabled()
-        );
+        self.eth_mac
+            .maccr
+            .write(|w| w.re().enabled().te().enabled().cstf().enabled());
 
         // Tell the ETH DMA the start of each ring
-        self.eth_dma.dmatdlar.write(|w| w.stl().bits(self.tdring.ptr() as u32));
-        self.eth_dma.dmardlar.write(|w| w.srl().bits(self.rdring.ptr() as u32));
+        self.eth_dma
+            .dmatdlar
+            .write(|w| w.stl().bits(self.tdring.ptr() as u32));
+        self.eth_dma
+            .dmardlar
+            .write(|w| w.srl().bits(self.rdring.ptr() as u32));
 
         // Set DMA bus mode
-        self.eth_dma.dmabmr.modify(|_, w|
-            w.aab().aligned()
-             .pbl().pbl1()
-        );
+        self.eth_dma
+            .dmabmr
+            .modify(|_, w| w.aab().aligned().pbl().pbl1());
 
         // Flush TX FIFO
         self.eth_dma.dmaomr.write(|w| w.ftf().flush());
         while self.eth_dma.dmaomr.read().ftf().is_flush() {}
 
         // Set DMA operation mode to store-and-forward and start DMA
-        self.eth_dma.dmaomr.write(|w|
-            w.rsf().store_forward()
-             .tsf().store_forward()
-             .st().started()
-             .sr().started()
-        );
+        self.eth_dma.dmaomr.write(|w| {
+            w.rsf()
+                .store_forward()
+                .tsf()
+                .store_forward()
+                .st()
+                .started()
+                .sr()
+                .started()
+        });
     }
 
     /// Read a register over SMI.
     fn smi_read(&mut self, reg: u8) -> u16 {
-        // Use PHY address 00000, set register address, set clock to HCLK/102, start read.
-        self.eth_mac.macmiiar.write(|w|
-            w.mb().busy()
-             .pa().bits(ETH_PHY_ADDR)
-             .cr().cr_150_168()
-             .mr().bits(reg)
-        );
+        // Use PHY address 00000, set register address, set clock to HCLK/102, start
+        // read.
+        self.eth_mac.macmiiar.write(|w| {
+            w.mb()
+                .busy()
+                .pa()
+                .bits(ETH_PHY_ADDR)
+                .cr()
+                .cr_150_168()
+                .mr()
+                .bits(reg)
+        });
 
         // Wait for read
         while self.eth_mac.macmiiar.read().mb().is_busy() {}
@@ -340,29 +382,34 @@ impl EthernetDevice {
 
     /// Write a register over SMI.
     fn smi_write(&mut self, reg: u8, val: u16) {
-        // Use PHY address 00000, set write data, set register address, set clock to HCLK/102,
-        // start write operation.
+        // Use PHY address 00000, set write data, set register address, set clock to
+        // HCLK/102, start write operation.
         self.eth_mac.macmiidr.write(|w| w.td().bits(val));
-        self.eth_mac.macmiiar.write(|w|
-            w.mb().busy()
-             .pa().bits(ETH_PHY_ADDR)
-             .mw().write()
-             .cr().cr_150_168()
-             .mr().bits(reg)
-        );
+        self.eth_mac.macmiiar.write(|w| {
+            w.mb()
+                .busy()
+                .pa()
+                .bits(ETH_PHY_ADDR)
+                .mw()
+                .write()
+                .cr()
+                .cr_150_168()
+                .mr()
+                .bits(reg)
+        });
 
         while self.eth_mac.macmiiar.read().mb().is_busy() {}
     }
 
     /// Reset the connected PHY and wait for it to come out of reset.
     fn phy_reset(&mut self) {
-        self.smi_write(0x00, 1<<15);
-        while self.smi_read(0x00) & (1<<15) == (1<<15) {}
+        self.smi_write(0x00, 1 << 15);
+        while self.smi_read(0x00) & (1 << 15) == (1 << 15) {}
     }
 
     /// Command connected PHY to initialise.
     fn phy_init(&mut self) {
-        self.smi_write(0x00, 1<<12);
+        self.smi_write(0x00, 1 << 12);
     }
 
     /// Poll PHY to determine link status.
@@ -372,21 +419,30 @@ impl EthernetDevice {
         let lpa = self.smi_read(0x05);
 
         // No link without autonegotiate
-        if bcr & (1<<12) == 0 { return false; }
+        if bcr & (1 << 12) == 0 {
+            return false;
+        }
         // No link if link is down
-        if bsr & (1<< 2) == 0 { return false; }
+        if bsr & (1 << 2) == 0 {
+            return false;
+        }
         // No link if remote fault
-        if bsr & (1<< 4) != 0 { return false; }
+        if bsr & (1 << 4) != 0 {
+            return false;
+        }
         // No link if autonegotiate incomplete
-        if bsr & (1<< 5) == 0 { return false; }
+        if bsr & (1 << 5) == 0 {
+            return false;
+        }
         // No link if other side can't do 100Mbps full duplex
-        if lpa & (1<< 8) == 0 { return false; }
+        if lpa & (1 << 8) == 0 {
+            return false;
+        }
 
         // Got link. Configure MAC to 100Mbit/s and full duplex.
-        self.eth_mac.maccr.modify(|_, w|
-            w.fes().fes100()
-             .dm().full_duplex()
-        );
+        self.eth_mac
+            .maccr
+            .modify(|_, w| w.fes().fes100().dm().full_duplex());
 
         true
     }
@@ -397,11 +453,12 @@ pub struct RxToken(*mut EthernetDevice);
 
 impl phy::TxToken for TxToken {
     fn consume<R, F>(self, _timestamp: Instant, len: usize, f: F) -> smoltcp::Result<R>
-        where F: FnOnce(&mut [u8]) -> smoltcp::Result<R>
+    where
+        F: FnOnce(&mut [u8]) -> smoltcp::Result<R>,
     {
-        // There can only be a single EthernetDevice and therefore all TxTokens are wrappers
-        // to a raw pointer to it. Unsafe required to dereference this pointer and call
-        // the various TDes methods.
+        // There can only be a single EthernetDevice and therefore all TxTokens are
+        // wrappers to a raw pointer to it. Unsafe required to dereference this
+        // pointer and call the various TDes methods.
         assert!(len <= ETH_BUF_SIZE);
         unsafe {
             let tdes = (*self.0).tdring.next().unwrap();
@@ -416,11 +473,12 @@ impl phy::TxToken for TxToken {
 
 impl phy::RxToken for RxToken {
     fn consume<R, F>(self, _timestamp: Instant, f: F) -> smoltcp::Result<R>
-        where F: FnOnce(&[u8]) -> smoltcp::Result<R>
+    where
+        F: FnOnce(&[u8]) -> smoltcp::Result<R>,
     {
-        // There can only be a single EthernetDevice and therefore all RxTokens are wrappers
-        // to a raw pointer to it. Unsafe required to dereference this pointer and call
-        // the various RDes methods.
+        // There can only be a single EthernetDevice and therefore all RxTokens are
+        // wrappers to a raw pointer to it. Unsafe required to dereference this
+        // pointer and call the various RDes methods.
         unsafe {
             let rdes = (*self.0).rdring.next().unwrap();
             let result = f(rdes.buf_as_slice());
