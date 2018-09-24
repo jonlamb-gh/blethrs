@@ -27,10 +27,12 @@ pub const FLASH_SECTOR_ADDRESSES: [u32; 12] = [
 pub const FLASH_END: u32 = 0x080F_FFFF;
 /// Address of configuration sector. Must be one of the start addresses in
 /// FLASH_SECTOR_ADDRESSES.
-pub const FLASH_CONFIG: u32 = FLASH_SECTOR_ADDRESSES[3];
+//pub const FLASH_CONFIG: u32 = FLASH_SECTOR_ADDRESSES[3];
+pub const FLASH_CONFIG: u32 = FLASH_SECTOR_ADDRESSES[4];
 /// Address of user firmware sector. Must be one of the start addresses in
 /// FLASH_SECTOR_ADDRESSES.
-pub const FLASH_USER: u32 = FLASH_SECTOR_ADDRESSES[4];
+//pub const FLASH_USER: u32 = FLASH_SECTOR_ADDRESSES[4];
+pub const FLASH_USER: u32 = FLASH_SECTOR_ADDRESSES[5];
 
 /// Magic value used in this module to check if bootloader should start.
 pub const BOOTLOAD_FLAG_VALUE: u32 = 0xB00110AD;

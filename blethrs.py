@@ -228,7 +228,7 @@ def main():
     parser_configure = subparsers.add_parser(
         "configure", help="Load new configuration")
     parser_configure.add_argument(
-        "--lma", default=0x0800C000,
+        "--lma", type=int, default=0x0800C000,
         help="address to write to, default 0x0800C000")
     parser_configure.add_argument(
         "mac_address", help="MAC address, in format XX:XX:XX:XX:XX:XX")
