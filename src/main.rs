@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 
-#[macro_use(entry,exception)]
 extern crate cortex_m_rt;
 
 extern crate cortex_m;
@@ -14,7 +13,7 @@ extern crate smoltcp;
 extern crate byteorder;
 
 use stm32f4::stm32f407;
-
+use cortex_m_rt::{entry, exception};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Error {
@@ -154,7 +153,7 @@ fn systick_init(syst: &mut stm32f407::SYST) {
     syst.enable_counter();
 }
 
-entry!(main);
+#[entry]
 fn main() -> ! {
     let mut peripherals = stm32f407::Peripherals::take().unwrap();
     let mut core_peripherals = stm32f407::CorePeripherals::take().unwrap();
@@ -227,8 +226,8 @@ fn main() -> ! {
 
 static mut SYSTICK_TICKS: u32 = 0;
 static mut SYSTICK_RESET_AT: Option<u32> = None;
-exception!(SysTick, tick);
-fn tick() {
+#[exception]
+fn SysTick() {
     let ticks = unsafe { core::ptr::read_volatile(&SYSTICK_TICKS) + 1 };
     unsafe { core::ptr::write_volatile(&mut SYSTICK_TICKS, ticks) };
     network::poll(ticks as i64);
@@ -249,14 +248,12 @@ pub fn schedule_reset(delay: u32) {
     });
 }
 
-exception!(HardFault, hard_fault);
-
-fn hard_fault(ef: &cortex_m_rt::ExceptionFrame) -> ! {
+#[exception]
+fn HardFault(ef: &cortex_m_rt::ExceptionFrame) -> ! {
     panic!("HardFault at {:#?}", ef);
 }
 
-exception!(*, default_handler);
-
-fn default_handler(irqn: i16) {
+#[exception]
+fn DefaultHandler(irqn: i16) {
     panic!("Unhandled exception (IRQn = {})", irqn);
 }
