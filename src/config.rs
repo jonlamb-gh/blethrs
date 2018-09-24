@@ -11,28 +11,29 @@ pub const ETH_PHY_ADDR: u8 = 0;
 /// Start address of each sector in flash
 pub const FLASH_SECTOR_ADDRESSES: [u32; 12] = [
     0x0800_0000,
-    0x0800_4000,
     0x0800_8000,
-    0x0800_C000,
     0x0801_0000,
+    0x0801_8000,
     0x0802_0000,
     0x0804_0000,
-    0x0806_0000,
     0x0808_0000,
-    0x080A_0000,
     0x080C_0000,
-    0x080E_0000,
+    0x0810_0000,
+    0x0814_0000,
+    0x0818_0000,
+    0x081C_0000,
 ];
+
 /// Final valid address in flash
-pub const FLASH_END: u32 = 0x080F_FFFF;
+pub const FLASH_END: u32 = 0x081F_FFFF;
+
 /// Address of configuration sector. Must be one of the start addresses in
 /// FLASH_SECTOR_ADDRESSES.
-//pub const FLASH_CONFIG: u32 = FLASH_SECTOR_ADDRESSES[3];
-pub const FLASH_CONFIG: u32 = FLASH_SECTOR_ADDRESSES[4];
+pub const FLASH_CONFIG: u32 = FLASH_SECTOR_ADDRESSES[3];
+
 /// Address of user firmware sector. Must be one of the start addresses in
 /// FLASH_SECTOR_ADDRESSES.
-//pub const FLASH_USER: u32 = FLASH_SECTOR_ADDRESSES[4];
-pub const FLASH_USER: u32 = FLASH_SECTOR_ADDRESSES[5];
+pub const FLASH_USER: u32 = FLASH_SECTOR_ADDRESSES[4];
 
 /// Magic value used in this module to check if bootloader should start.
 pub const BOOTLOAD_FLAG_VALUE: u32 = 0xB00110AD;
