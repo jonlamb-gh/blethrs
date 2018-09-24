@@ -39,6 +39,9 @@ pub const FLASH_USER: u32 = FLASH_SECTOR_ADDRESSES[4];
 pub const BOOTLOAD_FLAG_VALUE: u32 = 0xB00110AD;
 /// Address of magic value used in this module to check if bootloader should
 /// start.
+/// SRAM1
+//pub const BOOTLOAD_FLAG_ADDRESS: u32 = 0x2002_0000;
+// DTCM RAM
 pub const BOOTLOAD_FLAG_ADDRESS: u32 = 0x2000_0000;
 
 /// This function should return true if the bootloader should enter bootload

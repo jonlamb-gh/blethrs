@@ -221,7 +221,7 @@ def main():
         "info", help="Just read bootloader information without rebooting")
     parser_program = subparsers.add_parser(
         "program", help="Bootload new firmware image")
-    parser_program.add_argument("--lma", default=0x08010000,
+    parser_program.add_argument("--lma", type=int, default=0x08010000,
                                 help="address to load to, default 0x08010000")
     parser_program.add_argument("binfile", type=argparse.FileType('rb'),
                                 help="raw binary file to program")
